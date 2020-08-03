@@ -1,0 +1,28 @@
+{
+  "schemaVersion" : "2.2",
+  "description" : "Update SSH Keys",
+  "parameters" : {
+    "Key" : {
+      "type" : "String",
+      "description" : "(Required) The SSH Key to be updated"
+    },
+    "Update" : {
+      "type" : "String",
+      "description" : "(Required) Add the key to the current authorized_keys file or replace the entire file with new key",
+      "allowedValues" : [ "Update", "Replace" ],
+      "default" : "Update"
+    },
+    "Users" : {
+      "type" : "String",
+      "description" : "(Required) The users whose keys need to be updated. Each user MUST be space separated"
+    }
+  },
+  "mainSteps" : [ {
+    "action" : "aws:runShellScript",
+    "name" : "runShellScript",
+    "inputs" : {
+      "timeoutSeconds" : 600,
+      "runCommand" : [ "#!/bin/bash", "", "create_user () {", " exists=`grep -c \"^${1}:\" /etc/passwd`", " if [ $exists -eq 0 ] # does not exist", " then ", " useradd -m $1", " printf \"User Successfully Added\"", " fi", "}", "", "check_key() {", " ", " for file in `ls /home/$1/git`", " do", " if [ ${file: -4} == \".pub\" ]", " then", " key=`cat /home/$1/git/${1}.pub`", " echo $key", " else", " printf \"Error Occurred; Could not read key or Key does not exist\"", " fi", " done", " ", " echo $key", " ", "}", " ", "update_key() {", " cd /home/$1/", " ", " mkdir -p .ssh/", " touch /home/$1/.ssh/authorized_keys", " ", " if [ {{Update}} == \"Update\" ]", " then", "  echo $2 >> /home/$1/.ssh/authorized_keys", "  printf \"Key Added\"", " elif [ {{Update}} == \"Replace\" ]", " then", "  echo $2 > /home/$1/.ssh/authorized_keys", "  printf \"Key Added\"", " fi", "}", " ", "for user in {{Users}}", "do", " create_user $user", " # check_key $user", " pubkey=\"{{Key}}\"", " update_key $user \"$pubkey\"", "done" ]
+    }
+  } ]
+}
